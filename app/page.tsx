@@ -3,7 +3,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [showInput, setShowInput] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [promptText, setPromptText] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
 
