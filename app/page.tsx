@@ -57,8 +57,8 @@ export default function Home() {
             <input
               type="file"
               accept="image/*" // Only allow image files
-              onChange={(e) => {
-                const file = e.target.files?.[0] ?? null;
+              onChange={(event : React.ChangeEvent<HTMLInputElement>) => {
+                const file = event.target.files?.[0] ?? null;
                 setSelectedImage(file);
               }}
               className="mt-4 px-4 py-2 w-72 sm:w-96 rounded-lg bg-gray-900/70 backdrop-blur-sm border border-cyan-400 placeholder-cyan-300 text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-black hover:file:bg-cyan-600 transition-all cursor-pointer"
