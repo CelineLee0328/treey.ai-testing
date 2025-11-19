@@ -5,41 +5,30 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
+.Page{
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, Helvetica, sans-serif;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
-.ComingSoon {
-  display: flex;              
-  justify-content: center;    
-  align-items: center;       
-  font-size: 4rem;       
-  font-weight: bold;     
-  color: white;       
-  font-family: 'Arial', sans-serif; 
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3); 
-  height: 100vh;
-}
-
-.Subtitle {
+.Topbar{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #4caf50;
   
-  margin-top: 1rem; 
-  margin-left: 6rem;
 
+}
+
+.Logo{
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.Coming-soon {
+  font-size: 1rem;
+  font-weight: 500;
 }
