@@ -2,14 +2,12 @@
 import { useState } from "react";
 
 export default function Home() {
-  //variables
   const [showInput, setShowInput] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [promptText, setPromptText] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
 
   const handleGenerate = () => {
-
     console.log("=== GENERATE CLICKED ===");
     console.log("Selected Model:", selectedModel);
     console.log("Scenario/Prompt:", promptText);
@@ -18,99 +16,176 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] flex flex-col font-sans text-white">
+    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
+      
+      {/* Animated background effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+      </div>
 
       {/* Header */}
-      <header className="flex justify-between items-center px-8 py-4 bg-[#0d0d0d] shadow-lg border-b border-cyan-500">
-        <div className="text-2xl font-bold tracking-widest text-cyan-400 animate-pulse">
-          🌳 treey.ai
+      <header className="relative z-10 flex justify-between items-center px-8 py-6 bg-black/30 backdrop-blur-xl border-b border-cyan-500/30">
+        <div className="flex items-center gap-3">
+          <div className="text-3xl">🌳</div>
+          <div className="text-2xl font-bold tracking-wider bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+            treey.ai
+          </div>
+        </div>
+        <div className="hidden sm:flex gap-6 text-sm">
+          <a href="#" className="text-gray-300 hover:text-cyan-400 transition-colors">Features</a>
+          <a href="#" className="text-gray-300 hover:text-cyan-400 transition-colors">About</a>
+          <a href="#" className="text-gray-300 hover:text-cyan-400 transition-colors">Contact</a>
         </div>
       </header>
 
       {/* Main Section */}
-      <section className="flex flex-1 items-center justify-center flex-col text-center px-4">
-        <h1 className="text-5xl sm:text-6xl font-extrabold mb-8 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient-x">
-          Hello there! <br /> It's about to start...
+      <section className="relative z-10 flex flex-1 items-center justify-center flex-col text-center px-4 py-12">
+        <div className="mb-8 inline-block">
+          <span className="px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 text-sm text-cyan-300 backdrop-blur-sm">
+            ✨ AI-Powered Virtual Try-On
+          </span>
+        </div>
+
+        <h1 className="text-6xl sm:text-7xl font-black mb-6 leading-tight">
+          <span className="bg-gradient-to-r from-cyan-300 via-purple-300 to-pink-300 bg-clip-text text-transparent">
+            Transform Your
+          </span>
+          <br />
+          <span className="bg-gradient-to-r from-pink-300 via-purple-300 to-cyan-300 bg-clip-text text-transparent">
+            Product Vision
+          </span>
         </h1>
 
+        <p className="text-gray-400 text-lg mb-10 max-w-2xl">
+          Experience the future of virtual modeling. Upload your product, choose a model, and watch the magic happen.
+        </p>
+
         <button
-          className="mb-6 px-8 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-black font-bold shadow-lg hover:scale-105 hover:shadow-cyan-400/50 transition-all duration-300"
+          className="group relative mb-12 px-10 py-4 rounded-full bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 font-bold shadow-2xl hover:shadow-cyan-500/50 transition-all duration-500 overflow-hidden"
           onClick={() => setShowInput(!showInput)}
         >
-          {showInput ? "Hide Input" : "Try it out!"}
+          <span className="relative z-10 text-white text-lg flex items-center gap-2">
+            {showInput ? "← Go Back" : "Get Started →"}
+          </span>
+          <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
         </button>
 
         {showInput && (
-          <div className="flex flex-col items-center">
-
-            {/* Text Input Box */}
-            <input
-              type="text"
-              placeholder="Describe your scenario"
-              className="px-4 py-2 w-72 sm:w-96 rounded-lg bg-gray-900/70 backdrop-blur-sm border border-cyan-400 placeholder-cyan-300 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
-              value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
-            />
-
-            {/* Image Input Box */}
-            <input
-              type="file"
-              accept="image/*" // Only allow image files
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                const file = event.target.files?.[0] ?? null;
-                setSelectedImage(file);
-              }}
-              className="mt-4 px-4 py-2 w-72 sm:w-96 rounded-lg bg-gray-900/70 backdrop-blur-sm border border-cyan-400 placeholder-cyan-300 text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-500 file:text-black hover:file:bg-cyan-600 transition-all cursor-pointer"
-            />
-
-
-            {/* Model Selection */}
-            <div className="mt-6 w-full max-w-2xl">
-              <h3 className="text-cyan-400 font-bold mb-3 text-left">Choose your Model</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                  { name: "Sophia", desc: "Professional", color: "from-pink-500 to-rose-500" },
-                  { name: "Liam", desc: "Casual", color: "from-blue-500 to-teal-500" },
-                  { name: "Isabella", desc: "Artistic", color: "from-purple-500 to-indigo-500" },
-                  { name: "Noah", desc: "Sporty", color: "from-orange-500 to-red-500" },
-                ].map((model) => (
-                  <div
-                    key={model.name}
-                    onClick={() => setSelectedModel(model.name)}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all transform hover:scale-105 ${selectedModel === model.name
-                      ? "border-cyan-400 bg-gray-800 scale-105 shadow-lg shadow-cyan-500/20"
-                      : "border-gray-700 bg-gray-900/50 hover:border-gray-500"
-                      }`}
-                  >
-                    <div className={`w-full h-20 rounded-lg bg-gradient-to-br ${model.color} mb-2 flex items-center justify-center text-2xl`}>
-                      {model.name[0]}
-                    </div>
-                    <p className="font-bold text-white">{model.name}</p>
-                    <p className="text-xs text-gray-400">{model.desc}</p>
+          <div className="w-full max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+            
+            {/* Input Card */}
+            <div className="bg-black/40 backdrop-blur-2xl rounded-3xl p-8 border border-cyan-500/20 shadow-2xl mb-8">
+              
+              {/* Scenario Input */}
+              <div className="mb-6">
+                <label className="block text-left text-cyan-300 font-semibold mb-3 text-sm uppercase tracking-wider">
+                  Describe Your Scenario
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="e.g., Professional business meeting, Beach vacation, Evening party..."
+                    className="w-full px-6 py-4 rounded-2xl bg-slate-900/50 backdrop-blur-sm border-2 border-gray-700 placeholder-gray-500 text-white focus:outline-none focus:border-cyan-400 transition-all duration-300"
+                    value={promptText}
+                    onChange={(e) => setPromptText(e.target.value)}
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600">
+                    ✍️
                   </div>
-                ))}
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div className="mb-8">
+                <label className="block text-left text-cyan-300 font-semibold mb-3 text-sm uppercase tracking-wider">
+                  Upload Product Image
+                </label>
+                <div className="relative group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      setSelectedImage(file);
+                    }}
+                    className="w-full px-6 py-4 rounded-2xl bg-slate-900/50 backdrop-blur-sm border-2 border-dashed border-gray-700 text-white file:mr-4 file:py-2 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-cyan-500 file:to-purple-500 file:text-white hover:file:shadow-lg hover:border-cyan-400 transition-all cursor-pointer group-hover:border-cyan-500/50"
+                  />
+                  {selectedImage && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-green-400">
+                      ✓
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Model Selection */}
+              <div>
+                <label className="block text-left text-cyan-300 font-semibold mb-4 text-sm uppercase tracking-wider">
+                  Select Your Model
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { name: "Sophia", desc: "Professional", color: "from-pink-500 to-rose-500", emoji: "👔" },
+                    { name: "Liam", desc: "Casual", color: "from-blue-500 to-teal-500", emoji: "👕" },
+                    { name: "Isabella", desc: "Artistic", color: "from-purple-500 to-indigo-500", emoji: "🎨" },
+                    { name: "Noah", desc: "Sporty", color: "from-orange-500 to-red-500", emoji: "⚡" },
+                  ].map((model) => (
+                    <div
+                      key={model.name}
+                      onClick={() => setSelectedModel(model.name)}
+                      className={`group relative p-4 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
+                        selectedModel === model.name
+                          ? "bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border-2 border-cyan-400 shadow-xl shadow-cyan-500/20"
+                          : "bg-slate-900/50 border-2 border-gray-700 hover:border-gray-600"
+                      }`}
+                    >
+                      <div className={`w-full h-24 rounded-xl bg-gradient-to-br ${model.color} mb-3 flex items-center justify-center text-4xl shadow-lg`}>
+                        {model.emoji}
+                      </div>
+                      <p className="font-bold text-white text-lg">{model.name}</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide">{model.desc}</p>
+                      {selectedModel === model.name && (
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-cyan-400 rounded-full flex items-center justify-center text-black text-xs font-bold">
+                          ✓
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* --- FINAL GENERATE BUTTON --- */}
+            {/* Generate Button */}
             <button
-              className="mt-8 px-12 py-3 rounded-full bg-gradient-to-r from-cyan-400 to-purple-400 text-black text-lg font-extrabold shadow-xl shadow-cyan-500/30 hover:scale-[1.03] hover:shadow-cyan-400/50 transition-all duration-300 transform"
+              className="group relative w-full sm:w-auto px-16 py-5 rounded-2xl bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 text-white text-xl font-black shadow-2xl shadow-purple-500/40 hover:shadow-cyan-400/60 hover:scale-[1.02] transition-all duration-500 overflow-hidden"
               onClick={handleGenerate}
             >
-              GENERATE
+              <span className="relative z-10 flex items-center justify-center gap-3">
+                <span>GENERATE MAGIC</span>
+                <span className="text-2xl group-hover:translate-x-2 transition-transform duration-300">✨</span>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             </button>
-
-
           </div>
         )}
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0d0d0d] text-white shadow-md px-8 py-4 flex flex-col items-center gap-1 border-t border-cyan-500">
-        <p className="font-semibold tracking-wide text-cyan-400">Our Team</p>
-        <p className="text-sm sm:text-base">
-          João – joao@example.com | Celine – celine@example.com | Sylvia – sylvia@example.com
-        </p>
+      <footer className="relative z-10 bg-black/30 backdrop-blur-xl text-white px-8 py-8 flex flex-col items-center gap-4 border-t border-cyan-500/30">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
+          <p className="font-bold tracking-widest text-cyan-400 uppercase text-sm">Our Team</p>
+          <div className="w-8 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-6 text-sm text-gray-400">
+          <a href="mailto:joao@example.com" className="hover:text-cyan-400 transition-colors">João</a>
+          <span className="hidden sm:block">•</span>
+          <a href="mailto:celine@example.com" className="hover:text-cyan-400 transition-colors">Celine</a>
+          <span className="hidden sm:block">•</span>
+          <a href="mailto:sylvia@example.com" className="hover:text-cyan-400 transition-colors">Sylvia</a>
+        </div>
+        <p className="text-xs text-gray-600 mt-2">© 2024 treey.ai - All rights reserved</p>
       </footer>
     </main>
   );
