@@ -6,15 +6,18 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   try {
     const { prompt, imageUrl, image_size = "1:1" } = await req.json();
-    if (!process.env.NANOBANANA_API_KEY) return NextResponse.json({ error: "Missing API key" }, { status: 500 });
 
-    // 使用 uuid 當作 callback key
+    if (!process.env.NANOBANANA_API_KEY) {
+      return NextResponse.json({ error: "Missing API key" }, { status: 500 });
+    }
+
+    // Generate a unique callback key
     const callbackKey = uuidv4();
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://treey-ai-testing.vercel.app";
-    const callBackUrl = `${baseUrl}/api/callback?key=${callbackKey}`;
+    const callbackUrl = `${baseUrl}/api/callback?key=${callbackKey}`;
 
-    // 送給 NanoBanana
-    const apiRes = await fetch("https://api.nanobananaapi.ai/api/v1/nanobanana/generate", {
+    // Send request to NanoBanana
+    const response = await fetch("https://api.nanobananaapi.ai/api/v1/nanobanana/generate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -24,20 +27,21 @@ export async function POST(req: Request) {
         prompt,
         type: "IMAGETOIAMGE",
         imageUrls: [imageUrl],
-        callBackUrl,
+        callBackUrl: callbackUrl,
         numImages: 1,
         image_size,
       }),
     });
 
-    if (!apiRes.ok) {
-      const errText = await apiRes.text();
-      return NextResponse.json({ error: "NanoBanana request failed", details: errText }, { status: 500 });
+    if (!response.ok) {
+      const errorText = await response.text();
+      return NextResponse.json({ error: "NanoBanana request failed", details: errorText }, { status: 500 });
     }
 
     return NextResponse.json({ callbackKey });
 
   } catch (err) {
+    console.error("Generate API error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

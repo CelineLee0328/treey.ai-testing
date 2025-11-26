@@ -18,67 +18,79 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
-  if (!promptText || !selectedModel || !selectedImage)
-    return alert("Please fill all fields");
-
-  setLoading(true);
-  setGeneratedImage(null);
-
-  try {
-    // 1️⃣ 讀成 Base64
-    const userImageBase64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Failed to read image"));
-      reader.readAsDataURL(selectedImage);
-    });
-
-    // 2️⃣ Upload to Cloudinary
-    const uploadRes = await fetch("/api/upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: userImageBase64 }),
-    });
-
-    const uploadData = await uploadRes.json();
-    if (!uploadRes.ok || !uploadData.url) {
-      console.error("Cloudinary response:", uploadData);
-      throw new Error(`Cloudinary upload failed: ${uploadData.error || "unknown"}`);
+    if (!promptText || !selectedModel || !selectedImage) {
+      return alert("Please fill all fields");
     }
 
-    const imageUrl = uploadData.url;
-    console.log("Uploaded to Cloudinary:", imageUrl);
+    setLoading(true);
+    setGeneratedImage(null);
 
-    // 3️⃣ Compose full prompt
-    const fullPrompt = `
+    try {
+      // 1️⃣ Convert product image to Base64
+      const userImageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Failed to read image"));
+        reader.readAsDataURL(selectedImage);
+      });
+
+      // 2️⃣ Upload product image to Cloudinary
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: userImageBase64 }),
+      });
+
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.url) {
+        console.error("Cloudinary response:", uploadData);
+        throw new Error(`Cloudinary upload failed: ${uploadData.error || "unknown"}`);
+      }
+      const imageUrl = uploadData.url;
+      console.log("Uploaded product image:", imageUrl);
+
+      // 3️⃣ Compose prompt for NanoBanana
+      const fullPrompt = `
 Combine the uploaded product image with a model described as:
 ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
-    // 4️⃣ Send to /api/generate
-    const generateRes = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: fullPrompt, imageUrl }),
-    });
+      // 4️⃣ Send to /api/generate
+      const generateRes = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: fullPrompt, imageUrl }),
+      });
+      const { callbackKey } = await generateRes.json();
+      if (!callbackKey) throw new Error("No callbackKey returned");
 
-    const { callbackKey } = await generateRes.json();
-    if (!callbackKey) throw new Error("No callbackKey returned");
+      // 5️⃣ Poll /api/result for generated image
+      const pollResult = async (key: string) => {
+        let attempts = 0;
+        while (attempts < 30) { // poll for max 1 minute
+          const res = await fetch(`/api/result?key=${key}`);
+          const data = await res.json();
+          if (data.status === "done" && data.url) return data.url;
+          if (data.status === "error") throw new Error("Image generation failed");
+          await new Promise(r => setTimeout(r, 2000)); // poll every 2 seconds
+          attempts++;
+        }
+        throw new Error("Timeout waiting for generated image");
+      };
 
-    // 5️⃣ 等待回傳 URL
-    // 直接輪詢 Cloudinary API 或你可以在 /api/callback 裡加一個立即返回 URL
-    // 這裡簡單示範 3 秒後直接使用 callbackKey 組成 URL
-    const resultUrl = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUD_NAME}/image/upload/treey_ai_results/${callbackKey}.png`;
-    setGeneratedImage(resultUrl);
+      const resultUrl = await pollResult(callbackKey);
+      setGeneratedImage(resultUrl);
+      console.log("Generated image URL:", resultUrl);
 
-  } catch (err: any) {
-    console.error(err);
-    alert(`Error: ${err.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
 
   return (
