@@ -56,24 +56,34 @@ ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
-      // 4️⃣ Send to /api/generate
+      // 4️⃣ Send request to /api/generate
       const generateRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: fullPrompt, imageUrl }),
       });
+
       const { callbackKey } = await generateRes.json();
       if (!callbackKey) throw new Error("No callbackKey returned");
+      console.log("🔹 Generation started, callbackKey:", callbackKey);
 
-      // 5️⃣ Poll /api/result for generated image
+      // 5️⃣ Poll /api/result until Cloudinary URL is ready
       const pollResult = async (key: string) => {
         let attempts = 0;
-        while (attempts < 30) { // poll for max 1 minute
-          const res = await fetch(`/api/result?key=${key}`);
-          const data = await res.json();
-          if (data.status === "done" && data.url) return data.url;
-          if (data.status === "error") throw new Error("Image generation failed");
-          await new Promise(r => setTimeout(r, 2000)); // poll every 2 seconds
+        while (attempts < 30) { // max 1 minute polling
+          try {
+            const res = await fetch(`/api/result?key=${key}`);
+            const data = await res.json();
+
+            console.log(`🔹 Poll attempt #${attempts + 1}:`, data);
+
+            if (data.status === "done" && data.url) return data.url;
+            if (data.status === "error") throw new Error("Image generation failed");
+          } catch (err) {
+            console.error("⚠ Poll error:", err);
+          }
+
+          await new Promise(r => setTimeout(r, 2000)); // wait 2s
           attempts++;
         }
         throw new Error("Timeout waiting for generated image");
@@ -81,7 +91,7 @@ according to this scenario: "${promptText}" for marketing use.
 
       const resultUrl = await pollResult(callbackKey);
       setGeneratedImage(resultUrl);
-      console.log("Generated image URL:", resultUrl);
+      console.log("✅ Generated image URL:", resultUrl);
 
     } catch (err: any) {
       console.error(err);
@@ -90,8 +100,6 @@ according to this scenario: "${promptText}" for marketing use.
       setLoading(false);
     }
   };
-
-
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
