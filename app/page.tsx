@@ -38,19 +38,13 @@ export default function Home() {
     setGeneratedImage(null);
 
     try {
-      // 1️⃣ 讀成 Base64
-      const userImageBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("Failed to read image"));
-        reader.readAsDataURL(selectedImage);
-      });
+      // 使用 FormData 直接上傳 File
+      const formData = new FormData();
+      formData.append("image", selectedImage);
 
-      // 2️⃣ Upload to /api/upload
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: userImageBase64 }),
+        body: formData,
       });
 
       if (!uploadRes.ok) {
@@ -61,14 +55,14 @@ export default function Home() {
       const { url: imageUrl } = await uploadRes.json();
       console.log("Uploaded to Cloudinary:", imageUrl);
 
-      // 3️⃣ Compose full prompt
+      // Compose full prompt
       const fullPrompt = `
 Combine the uploaded product image with a model described as:
 ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
-      // 4️⃣ Send to /api/generate
+      // Send to /api/generate
       const generateRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,7 +73,7 @@ according to this scenario: "${promptText}" for marketing use.
       const { requestId } = await generateRes.json();
       if (!requestId) throw new Error("No requestId returned");
 
-      // 5️⃣ Poll result
+      // Poll result
       const img = await pollResult(requestId);
       setGeneratedImage(img);
 
