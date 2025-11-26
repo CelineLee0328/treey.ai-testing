@@ -1,27 +1,76 @@
 "use client";
 import { useState } from "react";
 
+// Predefined model descriptions
+const modelDescriptions: Record<string, string> = {
+  Sophia: "A professional woman wearing elegant business attire, confident and poised",
+  Liam: "A casual young man wearing relaxed summer clothes, friendly and approachable",
+  Isabella: "An artistic woman with creative clothing, colorful and expressive",
+  Noah: "A sporty man, athletic and energetic, in sportswear, full of vitality",
+};
+
 export default function Home() {
   const [showInput, setShowInput] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [promptText, setPromptText] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleGenerate = () => {
-    console.log("=== GENERATE CLICKED ===");
-    console.log("Selected Model:", selectedModel);
-    console.log("Scenario/Prompt:", promptText);
-    console.log("Product Image:", selectedImage ? selectedImage.name : "None");
-    console.log("========================");
+  const pollResult = async (requestId: string) => {
+    let attempts = 0;
+    while (attempts < 30) {
+      const res = await fetch(`/api/result?requestId=${requestId}`);
+      const data = await res.json();
+      if (data.status === "done") return data.image;
+      if (data.status === "error") throw new Error("Image generation failed");
+      await new Promise(r => setTimeout(r, 2000)); // round every 2 sec
+      attempts++;
+    }
+    throw new Error("Timeout waiting for image");
+  };
+
+  const handleGenerate = async () => {
+    if (!promptText || !selectedModel || !selectedImage) return alert("Please fill all fields");
+    setLoading(true);
+    setGeneratedImage(null);
+
+    try {
+      const userImageBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(selectedImage);
+      });
+
+      const fullPrompt = `
+Combine the uploaded product image with a model described as: 
+${modelDescriptions[selectedModel]}
+according to this scenario: "${promptText}" for marketing use.
+`;
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: fullPrompt, init_image: userImageBase64 }),
+      });
+      const { requestId } = await res.json();
+      const img = await pollResult(requestId);
+      setGeneratedImage(img);
+    } catch (err) {
+      console.error(err);
+      alert("Error generating image");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
-      
-      {/* Animated background effects */}
+
+      {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
       {/* Header */}
@@ -73,11 +122,9 @@ export default function Home() {
 
         {showInput && (
           <div className="w-full max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700">
-            
-            {/* Input Card */}
+
+            {/* Scenario Input */}
             <div className="bg-black/40 backdrop-blur-2xl rounded-3xl p-8 border border-cyan-500/20 shadow-2xl mb-8">
-              
-              {/* Scenario Input */}
               <div className="mb-6">
                 <label className="block text-left text-cyan-300 font-semibold mb-3 text-sm uppercase tracking-wider">
                   Describe Your Scenario
@@ -90,9 +137,7 @@ export default function Home() {
                     value={promptText}
                     onChange={(e) => setPromptText(e.target.value)}
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600">
-                    ✍️
-                  </div>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600">✍️</div>
                 </div>
               </div>
 
@@ -101,22 +146,12 @@ export default function Home() {
                 <label className="block text-left text-cyan-300 font-semibold mb-3 text-sm uppercase tracking-wider">
                   Upload Product Image
                 </label>
-                <div className="relative group">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      setSelectedImage(file);
-                    }}
-                    className="w-full px-6 py-4 rounded-2xl bg-slate-900/50 backdrop-blur-sm border-2 border-dashed border-gray-700 text-white file:mr-4 file:py-2 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-cyan-500 file:to-purple-500 file:text-white hover:file:shadow-lg hover:border-cyan-400 transition-all cursor-pointer group-hover:border-cyan-500/50"
-                  />
-                  {selectedImage && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-green-400">
-                      ✓
-                    </div>
-                  )}
-                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
+                  className="w-full px-6 py-4 rounded-2xl bg-slate-900/50 border-2 border-dashed border-gray-700 text-white file:mr-4 file:py-2 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-cyan-500 file:to-purple-500 file:text-white hover:file:shadow-lg hover:border-cyan-400 transition-all cursor-pointer"
+                />
               </div>
 
               {/* Model Selection */}
@@ -130,15 +165,14 @@ export default function Home() {
                     { name: "Liam", desc: "Casual", color: "from-blue-500 to-teal-500", emoji: "👕" },
                     { name: "Isabella", desc: "Artistic", color: "from-purple-500 to-indigo-500", emoji: "🎨" },
                     { name: "Noah", desc: "Sporty", color: "from-orange-500 to-red-500", emoji: "⚡" },
-                  ].map((model) => (
+                  ].map(model => (
                     <div
                       key={model.name}
                       onClick={() => setSelectedModel(model.name)}
-                      className={`group relative p-4 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-                        selectedModel === model.name
-                          ? "bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border-2 border-cyan-400 shadow-xl shadow-cyan-500/20"
-                          : "bg-slate-900/50 border-2 border-gray-700 hover:border-gray-600"
-                      }`}
+                      className={`group relative p-4 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 ${selectedModel === model.name
+                        ? "bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border-2 border-cyan-400 shadow-xl shadow-cyan-500/20"
+                        : "bg-slate-900/50 border-2 border-gray-700 hover:border-gray-600"
+                        }`}
                     >
                       <div className={`w-full h-24 rounded-xl bg-gradient-to-br ${model.color} mb-3 flex items-center justify-center text-4xl shadow-lg`}>
                         {model.emoji}
@@ -167,6 +201,29 @@ export default function Home() {
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             </button>
+
+            {loading && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                <div className="w-24 h-24 border-8 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="absolute mt-32 text-white font-semibold">Generating image...</p>
+              </div>
+            )}
+
+            {generatedImage && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                <div className="bg-slate-900 rounded-3xl p-6 shadow-2xl relative max-w-lg w-full">
+                  <button
+                    onClick={() => setGeneratedImage(null)}
+                    className="absolute top-3 right-3 text-white text-xl font-bold"
+                  >
+                    ✕
+                  </button>
+                  <img src={generatedImage} alt="result" className="w-full rounded-2xl" />
+                  <p className="text-center text-gray-400 mt-2 text-sm">✨ Your StudYo creation ✨</p>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </section>
