@@ -157,7 +157,7 @@ according to this scenario: "${promptText}" for marketing use.
               {/* Model Selection */}
               <div>
                 <label className="block text-left text-cyan-300 font-semibold mb-4 text-sm uppercase tracking-wider">
-                  Select Your Model
+                  Select Your Model:
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
