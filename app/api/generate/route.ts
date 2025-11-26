@@ -12,36 +12,11 @@ export async function POST(req: Request) {
 
     if (!init_image) return NextResponse.json({ error: "No image provided" }, { status: 400 });
 
-    // upload image to upload API
-    const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "https://treey.ai"}/api/upload`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: init_image }),
-    });
-
-    if (!uploadRes.ok) {
-      const text = await uploadRes.text();
-      console.error("Upload failed:", text);
-      return NextResponse.json({ error: "Failed to upload image", details: text }, { status: 500 });
-    }
-
-    let uploadData: { url?: string };
-    try {
-      uploadData = await uploadRes.json();
-    } catch (e) {
-      console.error("Failed to parse upload response:", e);
-      return NextResponse.json({ error: "Failed to parse upload response" }, { status: 500 });
-    }
-
-    if (!uploadData.url) {
-      return NextResponse.json({ error: "Upload did not return URL" }, { status: 500 });
-    }
-
+    // 產生 requestId 並暫存狀態
     const requestId = uuidv4();
-    // temporary store the initial state
     tempStore[requestId] = { status: "pending", image: null, createdAt: Date.now() };
 
-    // call NanoBanana API
+    // 直接呼叫 NanoBanana API，傳 Base64
     const apiRes = await fetch("https://api.nanobananaapi.ai/api/v1/nanobanana/generate", {
       method: "POST",
       headers: {
@@ -50,12 +25,13 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         prompt,
-        type: "IMAGETOIAMGE",
-        imageUrls: [uploadData.url],
+        type: "IMAGETOIMAGE",         // 注意拼寫
+        images: [init_image],         // 直接傳 Base64
         callBackUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://treey-ai-testing.vercel.app"}/api/callback?requestId=${encodeURIComponent(requestId)}`,
       }),
     });
 
+    // 檢查 NanoBanana API 回傳狀態
     if (!apiRes.ok) {
       const errText = await apiRes.text();
       console.error("NanoBanana API failed:", errText);

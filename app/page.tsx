@@ -36,6 +36,7 @@ export default function Home() {
     setGeneratedImage(null);
 
     try {
+      // 讀取圖片成 Base64
       const userImageBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
@@ -49,30 +50,23 @@ ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
+      // 直接傳 Base64 給 /api/generate
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: fullPrompt, init_image: userImageBase64 }),
       });
+
       if (!res.ok) {
         const text = await res.text();
         console.error("API call failed:", text);
         throw new Error("API request failed");
       }
-      // Try to parse JSON
-      let data;
-      try {
-        data = await res.json();
-      } catch (err) {
-        console.error("Failed to parse JSON:", err);
-        throw new Error("Invalid JSON response from API");
-      }
 
-      if (!data.requestId) {
-        console.error("Missing requestId in API response:", data);
-        throw new Error("API did not return a requestId");
-      }
+      const data = await res.json();
+      if (!data.requestId) throw new Error("API did not return a requestId");
 
+      // 輪詢結果
       const img = await pollResult(data.requestId);
       setGeneratedImage(img);
     } catch (err: any) {
@@ -82,6 +76,7 @@ according to this scenario: "${promptText}" for marketing use.
       setLoading(false);
     }
   };
+
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
