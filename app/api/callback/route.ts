@@ -9,8 +9,7 @@ export async function POST(req: Request) {
 
     const data = await req.json();
     console.log("Callback data:", data);
-
-    // 官方文件說明圖片會在 data.data[0].image 或 data.imageUrl
+    
     const image =
       data.data?.[0]?.image ||
       data.imageUrl ||
