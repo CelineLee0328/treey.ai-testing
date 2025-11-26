@@ -38,31 +38,38 @@ export default function Home() {
     setGeneratedImage(null);
 
     try {
-      // 使用 FormData 直接上傳 File
-      const formData = new FormData();
-      formData.append("image", selectedImage);
-
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+      // 1️⃣ 讀成 Base64
+      const userImageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Failed to read image"));
+        reader.readAsDataURL(selectedImage);
       });
 
-      if (!uploadRes.ok) {
-        const text = await uploadRes.text();
-        throw new Error(`Cloudinary upload failed: ${text}`);
+      // 2️⃣ Upload to Cloudinary
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: userImageBase64 }),
+      });
+
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok || !uploadData.url) {
+        console.error("Cloudinary response:", uploadData);
+        throw new Error(`Cloudinary upload failed: ${uploadData.error || "unknown"}`);
       }
 
-      const { url: imageUrl } = await uploadRes.json();
+      const imageUrl = uploadData.url;
       console.log("Uploaded to Cloudinary:", imageUrl);
 
-      // Compose full prompt
+      // 3️⃣ Compose full prompt
       const fullPrompt = `
 Combine the uploaded product image with a model described as:
 ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
-      // Send to /api/generate
+      // 4️⃣ Send to /api/generate
       const generateRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,7 +80,7 @@ according to this scenario: "${promptText}" for marketing use.
       const { requestId } = await generateRes.json();
       if (!requestId) throw new Error("No requestId returned");
 
-      // Poll result
+      // 5️⃣ Poll result
       const img = await pollResult(requestId);
       setGeneratedImage(img);
 
@@ -84,6 +91,7 @@ according to this scenario: "${promptText}" for marketing use.
       setLoading(false);
     }
   };
+
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
