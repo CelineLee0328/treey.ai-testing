@@ -40,7 +40,7 @@ export async function POST(req: Request) {
             },
             body: JSON.stringify({
                 prompt,
-                type: "IMAGETOIMAGE",
+                type: "IMAGETOIAMGE",
                 imageUrls: [uploadData.url],
                 callBackUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://treey-ai-testing.vercel.app"}/api/callback?requestId=${encodeURIComponent(requestId)}`,
             }),
