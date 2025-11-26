@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const filePath = path.join(uploadDir, filename);
     fs.writeFileSync(filePath, buffer);
 
-    const url = `https://treey.ai/uploads/${filename}`;
+    const url = `https://treey-ai-testing.vercel.app/uploads/${filename}`;
     res.status(200).json({ url });
   } catch (err) {
     console.error(err);

@@ -31,12 +31,15 @@ export default function Home() {
   };
 
   const handleGenerate = async () => {
-    if (!promptText || !selectedModel || !selectedImage) return alert("Please fill all fields");
+    if (!promptText || !selectedModel || !selectedImage)
+      return alert("Please fill all fields");
+
     setLoading(true);
     setGeneratedImage(null);
 
     try {
-      // 讀取圖片成 Base64
+      // 1️⃣ Convert uploaded product image to Base64
+      // This Base64 will be sent to /api/generate which handles uploading to a public URL
       const userImageBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
@@ -44,13 +47,18 @@ export default function Home() {
         reader.readAsDataURL(selectedImage);
       });
 
+      // 2️⃣ Compose full prompt with selected model description
       const fullPrompt = `
 Combine the uploaded product image with a model described as: 
 ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
-      // 直接傳 Base64 給 /api/generate
+      // 3️⃣ Send Base64 + prompt to backend
+      // Backend now:
+      // - uploads image to /public/uploads → gets a public URL
+      // - calls NanoBanana with imageUrls: [public URL]
+      // - returns a requestId for polling
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,8 +74,11 @@ according to this scenario: "${promptText}" for marketing use.
       const data = await res.json();
       if (!data.requestId) throw new Error("API did not return a requestId");
 
-      // 輪詢結果
+      // 4️⃣ Poll backend for image generation result
+      // The backend tracks NanoBanana callback using requestId in tempStore
       const img = await pollResult(data.requestId);
+
+      // 5️⃣ Display the final generated image
       setGeneratedImage(img);
     } catch (err: any) {
       console.error(err);
@@ -76,7 +87,6 @@ according to this scenario: "${promptText}" for marketing use.
       setLoading(false);
     }
   };
-
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
