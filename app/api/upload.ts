@@ -1,12 +1,11 @@
-// pages/api/upload.ts 或 app/api/upload/route.ts (app router)
 import type { NextApiRequest, NextApiResponse } from "next";
 import cloudinary from "cloudinary";
 
-// 設定 body 最大限制
+// Serverless 最大 body size
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "10mb", // 適合一般圖片
+      sizeLimit: "10mb",
     },
   },
 };
@@ -23,33 +22,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // 1️⃣ 確認環境變數
   if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-    console.error("Missing Cloudinary env variables");
+    console.error("Cloudinary env variables missing");
     return res.status(500).json({ error: "Cloudinary environment variables not set" });
   }
 
-  const { image } = req.body; // Base64 string
+  const { image } = req.body;
   if (!image) return res.status(400).json({ error: "No image provided" });
 
-  try {
-    // 2️⃣ 移除 Base64 前綴
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+  // 2️⃣ 驗證 Base64 格式
+  const base64Regex = /^data:image\/(png|jpeg|jpg|gif);base64,/;
+  if (!base64Regex.test(image)) {
+    console.error("Invalid Base64 format");
+    return res.status(400).json({ error: "Invalid Base64 image format" });
+  }
 
-    // 3️⃣ 上傳到 Cloudinary
-    const uploadRes = await cloudinary.v2.uploader.upload(
-      `data:image/png;base64,${base64Data}`, 
-      {
-        folder: "treey_ai_uploads", // 自訂資料夾
-        resource_type: "image",
-      }
-    );
+  // 3️⃣ 檢查圖片大小（保險起見）
+  const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+  const imageSizeInBytes = (base64Data.length * (3/4));
+  const maxSize = 5 * 1024 * 1024; // 5MB
+  if (imageSizeInBytes > maxSize) {
+    return res.status(400).json({ error: "Image too large. Max 5MB allowed." });
+  }
+
+  try {
+    // 4️⃣ 上傳到 Cloudinary
+    const uploadRes = await cloudinary.v2.uploader.upload(image, {
+      folder: "treey_ai_uploads",
+      resource_type: "image",
+    });
 
     console.log("Cloudinary upload success:", uploadRes.secure_url);
-
-    // 4️⃣ 回傳 URL
     return res.status(200).json({ url: uploadRes.secure_url });
 
   } catch (err: any) {
-    console.error("Cloudinary upload failed:", err);
-    return res.status(500).json({ error: "Cloudinary upload failed", details: err.message || err });
+    console.error("Cloudinary upload failed full error:", err);
+    return res.status(500).json({ error: "Cloudinary upload failed", details: JSON.stringify(err) });
   }
 }
