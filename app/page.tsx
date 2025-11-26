@@ -38,38 +38,49 @@ export default function Home() {
     setGeneratedImage(null);
 
     try {
-      // 1️⃣ Upload image to ImgBB
-      const formData = new FormData();
-      formData.append("image", selectedImage);
-      const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`, {
-        method: "POST",
-        body: formData,
+      // 1️⃣ 讀成 Base64
+      const userImageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Failed to read image"));
+        reader.readAsDataURL(selectedImage);
       });
-      if (!imgbbRes.ok) throw new Error("ImgBB upload failed");
-      const imgbbData = await imgbbRes.json();
-      const imageUrl = imgbbData.data.url;
-      console.log("ImgBB URL:", imageUrl);
 
-      // 2️⃣ Compose prompt
+      // 2️⃣ Upload to /api/upload → get ImgBB URL
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: userImageBase64 }),
+      });
+
+      if (!uploadRes.ok) {
+        const text = await uploadRes.text();
+        throw new Error(`ImgBB upload failed: ${text}`);
+      }
+
+      const { url: imageUrl } = await uploadRes.json();
+      console.log("Uploaded to ImgBB:", imageUrl);
+
+      // 3️⃣ Compose full prompt
       const fullPrompt = `
-Combine the uploaded product image with a model described as: 
+Combine the uploaded product image with a model described as:
 ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
-      // 3️⃣ Send prompt + ImgBB URL to backend
-      const res = await fetch("/api/generate", {
+      // 4️⃣ Send to /api/generate
+      const generateRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: fullPrompt, imageUrl }), // pass URL instead of Base64
+        body: JSON.stringify({ prompt: fullPrompt, imageUrl }),
       });
-      if (!res.ok) throw new Error("API request failed");
 
-      const data = await res.json();
-      if (!data.requestId) throw new Error("No requestId returned");
+      if (!generateRes.ok) throw new Error("Generate API failed");
+      const { requestId } = await generateRes.json();
+      if (!requestId) throw new Error("No requestId returned");
 
-      // 4️⃣ Poll result
-      const img = await pollResult(data.requestId);
+      // 5️⃣ Poll result
+      const img = await pollResult(requestId);
       setGeneratedImage(img);
 
     } catch (err: any) {
@@ -79,7 +90,6 @@ according to this scenario: "${promptText}" for marketing use.
       setLoading(false);
     }
   };
-
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
