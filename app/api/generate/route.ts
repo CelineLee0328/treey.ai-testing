@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         prompt,
-        type: "IMAGETOIMAGE",         // 注意拼寫
+        type: "IMAGETOIAMGE",         // 注意拼寫
         images: [init_image],         // 直接傳 Base64
         callBackUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://treey-ai-testing.vercel.app"}/api/callback?requestId=${encodeURIComponent(requestId)}`,
       }),
