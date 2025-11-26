@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         tempStore[requestId] = { status: "pending", image: null, createdAt: Date.now() };
 
         // call NanoBanana API
-        await fetch("https://api.nanobananaapi.ai/api/v1/nanobanana/generate", {
+        const apiRes = await fetch("https://api.nanobananaapi.ai/api/v1/nanobanana/generate", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -42,9 +42,17 @@ export async function POST(req: Request) {
                 prompt,
                 type: "IMAGETOIMAGE",
                 imageUrls: [uploadData.url],
-                callBackUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://treey.ai"}/api/callback?requestId=${encodeURIComponent(requestId)}`,
+                callBackUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://treey-ai-testing.vercel.app"}/api/callback?requestId=${encodeURIComponent(requestId)}`,
             }),
         });
+
+        // 檢查 NanoBanana API 回傳狀態
+        if (!apiRes.ok) {
+            const errText = await apiRes.text();
+            console.error("NanoBanana API failed:", errText);
+            return NextResponse.json({ error: "API request failed", details: errText }, { status: 500 });
+        }
+
 
 
         return NextResponse.json({ requestId });
