@@ -38,55 +38,48 @@ export default function Home() {
     setGeneratedImage(null);
 
     try {
-      // 1️⃣ Convert uploaded product image to Base64
-      // This Base64 will be sent to /api/generate which handles uploading to a public URL
-      const userImageBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error("Failed to read image"));
-        reader.readAsDataURL(selectedImage);
+      // 1️⃣ Upload image to ImgBB
+      const formData = new FormData();
+      formData.append("image", selectedImage);
+      const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`, {
+        method: "POST",
+        body: formData,
       });
+      if (!imgbbRes.ok) throw new Error("ImgBB upload failed");
+      const imgbbData = await imgbbRes.json();
+      const imageUrl = imgbbData.data.url;
+      console.log("ImgBB URL:", imageUrl);
 
-      // 2️⃣ Compose full prompt with selected model description
+      // 2️⃣ Compose prompt
       const fullPrompt = `
 Combine the uploaded product image with a model described as: 
 ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
-      // 3️⃣ Send Base64 + prompt to backend
-      // Backend now:
-      // - uploads image to /public/uploads → gets a public URL
-      // - calls NanoBanana with imageUrls: [public URL]
-      // - returns a requestId for polling
+      // 3️⃣ Send prompt + ImgBB URL to backend
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: fullPrompt, init_image: userImageBase64 }),
+        body: JSON.stringify({ prompt: fullPrompt, imageUrl }), // pass URL instead of Base64
       });
-
-      if (!res.ok) {
-        const text = await res.text();
-        console.error("API call failed:", text);
-        throw new Error("API request failed");
-      }
+      if (!res.ok) throw new Error("API request failed");
 
       const data = await res.json();
-      if (!data.requestId) throw new Error("API did not return a requestId");
+      if (!data.requestId) throw new Error("No requestId returned");
 
-      // 4️⃣ Poll backend for image generation result
-      // The backend tracks NanoBanana callback using requestId in tempStore
+      // 4️⃣ Poll result
       const img = await pollResult(data.requestId);
-
-      // 5️⃣ Display the final generated image
       setGeneratedImage(img);
+
     } catch (err: any) {
       console.error(err);
-      alert(`Error generating image: ${err.message}`);
+      alert(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
