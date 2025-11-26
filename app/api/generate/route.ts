@@ -16,6 +16,9 @@ export async function POST(req: Request) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://treey-ai-testing.vercel.app";
     const callbackUrl = `${baseUrl}/api/callback?key=${callbackKey}`;
 
+    console.log("🔹 Generated callbackKey:", callbackKey);
+    console.log("🔹 Callback URL:", callbackUrl);
+
     // Send request to NanoBanana
     const response = await fetch("https://api.nanobananaapi.ai/api/v1/nanobanana/generate", {
       method: "POST",
@@ -32,6 +35,8 @@ export async function POST(req: Request) {
         image_size,
       }),
     });
+
+    console.log("🔹 NanoBanana API response status:", response.status);
 
     if (!response.ok) {
       const errorText = await response.text();

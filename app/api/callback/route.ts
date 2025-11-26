@@ -9,6 +9,7 @@ export async function POST(req: Request) {
   try {
     const url = new URL(req.url);
     const callbackKey = url.searchParams.get("key");
+    console.log("🔹 Callback received with key:", callbackKey);
 
     if (!callbackKey) {
       return NextResponse.json({ error: "Missing key" }, { status: 400 });
