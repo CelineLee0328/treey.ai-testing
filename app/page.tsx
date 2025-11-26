@@ -36,9 +36,10 @@ export default function Home() {
     setGeneratedImage(null);
 
     try {
-      const userImageBase64 = await new Promise<string>((resolve) => {
+      const userImageBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Failed to read image"));
         reader.readAsDataURL(selectedImage);
       });
 
@@ -53,12 +54,30 @@ according to this scenario: "${promptText}" for marketing use.
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: fullPrompt, init_image: userImageBase64 }),
       });
-      const { requestId } = await res.json();
-      const img = await pollResult(requestId);
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("API call failed:", text);
+        throw new Error("API request failed");
+      }
+      // Try to parse JSON
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        console.error("Failed to parse JSON:", err);
+        throw new Error("Invalid JSON response from API");
+      }
+
+      if (!data.requestId) {
+        console.error("Missing requestId in API response:", data);
+        throw new Error("API did not return a requestId");
+      }
+
+      const img = await pollResult(data.requestId);
       setGeneratedImage(img);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Error generating image");
+      alert(`Error generating image: ${err.message}`);
     } finally {
       setLoading(false);
     }
