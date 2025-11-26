@@ -46,7 +46,7 @@ export default function Home() {
         reader.readAsDataURL(selectedImage);
       });
 
-      // 2️⃣ Upload to /api/upload → get ImgBB URL
+      // 2️⃣ Upload to /api/upload
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -55,11 +55,11 @@ export default function Home() {
 
       if (!uploadRes.ok) {
         const text = await uploadRes.text();
-        throw new Error(`ImgBB upload failed: ${text}`);
+        throw new Error(`Cloudinary upload failed: ${text}`);
       }
 
       const { url: imageUrl } = await uploadRes.json();
-      console.log("Uploaded to ImgBB:", imageUrl);
+      console.log("Uploaded to Cloudinary:", imageUrl);
 
       // 3️⃣ Compose full prompt
       const fullPrompt = `

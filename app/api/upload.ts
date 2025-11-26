@@ -1,44 +1,39 @@
-// /pages/api/upload.ts
+// pages/api/upload.ts
 import type { NextApiRequest, NextApiResponse } from "next";
-import FormData from "form-data";
+import cloudinary from "cloudinary";
 
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "10mb", 
+      sizeLimit: "10mb",
     },
   },
 };
 
+// 設定 Cloudinary
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { image } = req.body; // Expect a Base64 string
+  const { image } = req.body; // Base64 string
   if (!image) return res.status(400).json({ error: "No image provided" });
 
   try {
     const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
 
-    const formData = new FormData();
-    formData.append("key", process.env.IMGBB_API_KEY!);
-    formData.append("image", base64Data);
-
-    const imgbbRes = await fetch("https://api.imgbb.com/1/upload", {
-      method: "POST",
-      body: formData as any, // Node fetch 需要這樣
+    // 上傳到 Cloudinary
+    const uploadRes = await cloudinary.v2.uploader.upload(`data:image/png;base64,${base64Data}`, {
+      folder: "treey_ai_uploads", // 可以自訂資料夾
     });
 
-    const data = await imgbbRes.json();
-
-    if (!data.success) {
-      console.error("ImgBB upload failed:", data);
-      return res.status(500).json({ error: "ImgBB upload failed", details: data });
-    }
-
-    const url = data.data.url; // Public URL of uploaded image
-    return res.status(200).json({ url });
+    return res.status(200).json({ url: uploadRes.secure_url }); // 回傳 Cloudinary URL
   } catch (err) {
-    console.error("Upload API error:", err);
-    return res.status(500).json({ error: "Server error during upload" });
+    console.error("Cloudinary upload failed:", err);
+    return res.status(500).json({ error: "Cloudinary upload failed", details: err });
   }
 }
