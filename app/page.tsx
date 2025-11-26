@@ -34,47 +34,31 @@ export default function Home() {
         reader.readAsDataURL(selectedImage);
       });
 
-      // 2️⃣ Upload product image to Cloudinary
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: userImageBase64 }),
-      });
-
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok || !uploadData.url) {
-        console.error("Cloudinary response:", uploadData);
-        throw new Error(`Cloudinary upload failed: ${uploadData.error || "unknown"}`);
-      }
-      const imageUrl = uploadData.url;
-      console.log("Uploaded product image:", imageUrl);
-
-      // 3️⃣ Compose prompt for NanoBanana
+      // 2️⃣ Compose prompt for NanoBanana
       const fullPrompt = `
 Combine the uploaded product image with a model described as:
 ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
-      // 4️⃣ Send request to /api/generate
+      // 3️⃣ Send request to /api/generate
       const generateRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: fullPrompt, imageUrl }),
+        body: JSON.stringify({ prompt: fullPrompt, imageUrl: userImageBase64 }),
       });
 
       const { callbackKey } = await generateRes.json();
       if (!callbackKey) throw new Error("No callbackKey returned");
       console.log("🔹 Generation started, callbackKey:", callbackKey);
 
-      // 5️⃣ Poll /api/result until Cloudinary URL is ready
+      // 4️⃣ Poll /api/result until NanoBanana URL is ready
       const pollResult = async (key: string) => {
         let attempts = 0;
         while (attempts < 30) { // max 1 minute polling
           try {
             const res = await fetch(`/api/result?key=${key}`);
             const data = await res.json();
-
             console.log(`🔹 Poll attempt #${attempts + 1}:`, data);
 
             if (data.status === "done" && data.url) return data.url;
