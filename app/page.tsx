@@ -34,56 +34,49 @@ export default function Home() {
         reader.readAsDataURL(selectedImage);
       });
 
-      // 2️⃣ Compose prompt for NanoBanana
+      // 2️⃣ Compose prompt
       const fullPrompt = `
 Combine the uploaded product image with a model described as:
 ${modelDescriptions[selectedModel]}
 according to this scenario: "${promptText}" for marketing use.
 `;
 
-      // 3️⃣ Send request to /api/generate
-      const generateRes = await fetch("/api/generate", {
+      // 3️⃣ Send request to /api/generate → 取得 callbackKey
+      const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: fullPrompt, imageUrl: userImageBase64 }),
       });
 
-      const { callbackKey } = await generateRes.json();
+      const { callbackKey } = await res.json();
       if (!callbackKey) throw new Error("No callbackKey returned");
-      console.log("🔹 Generation started, callbackKey:", callbackKey);
 
-      // 4️⃣ Poll /api/result until NanoBanana URL is ready
-      const pollResult = async (key: string) => {
-        let attempts = 0;
-        while (attempts < 30) { // max 1 minute polling
-          try {
-            const res = await fetch(`/api/result?key=${key}`);
-            const data = await res.json();
-            console.log(`🔹 Poll attempt #${attempts + 1}:`, data);
+      console.log("🔹 Received callbackKey:", callbackKey);
 
-            if (data.status === "done" && data.url) return data.url;
-            if (data.status === "error") throw new Error("Image generation failed");
-          } catch (err) {
-            console.error("⚠ Poll error:", err);
-          }
+      // 4️⃣ 開 SSE 連線，等待推送
+      const eventSource = new EventSource(`/api/callback?key=${callbackKey}`);
 
-          await new Promise(r => setTimeout(r, 2000)); // wait 2s
-          attempts++;
-        }
-        throw new Error("Timeout waiting for generated image");
+      eventSource.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        console.log("✅ Received generated image URL:", data.url);
+        setGeneratedImage(data.url);
+        setLoading(false);
+        eventSource.close();
       };
 
-      const resultUrl = await pollResult(callbackKey);
-      setGeneratedImage(resultUrl);
-      console.log("✅ Generated image URL:", resultUrl);
+      eventSource.onerror = (err) => {
+        console.error("SSE error:", err);
+        setLoading(false);
+        eventSource.close();
+      };
 
     } catch (err: any) {
       console.error(err);
       alert(`Error: ${err.message}`);
-    } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
