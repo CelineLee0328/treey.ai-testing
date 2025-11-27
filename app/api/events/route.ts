@@ -1,4 +1,4 @@
-// app/api/events/route.ts
+// SSE endpoint
 import { NextRequest } from "next/server";
 
 export const runtime = "edge";
@@ -16,9 +16,14 @@ export async function GET(req: NextRequest) {
   // 儲存對應 key 的 writer
   clients[callbackKey] = writer;
 
-  // heartbeat
+  // heartbeat，避免連線被 proxy 關閉
   const interval = setInterval(() => {
-    writer.write(`:\n\n`);
+    try {
+      writer.write(`:\n\n`);
+    } catch {
+      clearInterval(interval);
+      delete clients[callbackKey];
+    }
   }, 20000);
 
   const close = () => {
@@ -44,6 +49,7 @@ export function broadcast(callbackKey: string, payload: any) {
   if (!writer) return;
   try {
     writer.write(`data: ${JSON.stringify(payload)}\n\n`);
+    // 不要關閉 writer，保持 SSE 長連線
   } catch {
     delete clients[callbackKey];
   }

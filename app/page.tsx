@@ -54,9 +54,10 @@ according to this scenario: "${promptText}" for marketing use.
       console.log("🔹 Received callbackKey:", callbackKey);
 
       // 4️⃣ 開 SSE 連線，等待推送
-      const eventSource = new EventSource(`/api/callback?key=${callbackKey}`);
+      const eventSource = new EventSource(`/api/events?key=${callbackKey}`);
 
       eventSource.onmessage = (e) => {
+        if (!e.data) return;
         const data = JSON.parse(e.data);
         console.log("✅ Received generated image URL:", data.url);
         setGeneratedImage(data.url);
@@ -76,7 +77,6 @@ according to this scenario: "${promptText}" for marketing use.
       setLoading(false);
     }
   };
-
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 flex flex-col font-sans text-white relative overflow-hidden">
